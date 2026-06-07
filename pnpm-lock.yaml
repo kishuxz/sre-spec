@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@checkpoint/cli':
+        specifier: workspace:*
+        version: link:packages/cli
       '@eslint/js':
         specifier: ^9.39.1
         version: 9.39.4
@@ -42,6 +45,22 @@ importers:
         specifier: ^4.1.13
         version: 4.4.3
 
+  packages/cli:
+    dependencies:
+      '@checkpoint/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.25
+        version: 20.19.42
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+      vitest:
+        specifier: ^4.0.15
+        version: 4.1.8(@types/node@20.19.42)(vite@8.0.16(@types/node@20.19.42)(esbuild@0.28.0)(tsx@4.22.4))
+
   packages/core:
     dependencies:
       '@checkpoint/schema':
@@ -63,6 +82,16 @@ importers:
       '@checkpoint/schema':
         specifier: workspace:*
         version: link:../schema
+
+  packages/github-action:
+    dependencies:
+      '@checkpoint/cli':
+        specifier: workspace:*
+        version: link:../cli
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.25
+        version: 20.19.42
 
   packages/schema:
     dependencies:

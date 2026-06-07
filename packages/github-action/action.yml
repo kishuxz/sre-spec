@@ -1,0 +1,17 @@
+name: "Checkpoint Verify Gate"
+description: "Run Checkpoint verify gate against recorded agent traces"
+inputs:
+  spec:
+    description: "Path to the Checkpoint spec module"
+    required: true
+  traces:
+    description: "Glob or directory of recorded trace JSON files"
+    required: true
+  quiet:
+    description: "Use quiet CI output"
+    required: false
+    default: "true"
+runs:
+  using: "node20"
+  main: "dist/index.js"
+
