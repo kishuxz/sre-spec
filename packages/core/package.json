@@ -1,0 +1,25 @@
+{
+  "name": "@checkpoint/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@checkpoint/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.25",
+    "vitest": "^4.0.15"
+  }
+}
