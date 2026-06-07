@@ -115,6 +115,25 @@ importers:
         specifier: ^20.19.25
         version: 20.19.42
 
+  packages/guard:
+    dependencies:
+      '@checkpoint/core':
+        specifier: workspace:*
+        version: link:../core
+      '@checkpoint/schema':
+        specifier: workspace:*
+        version: link:../schema
+    devDependencies:
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(postcss@8.5.15)(tsx@4.22.4)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.15
+        version: 4.1.8(@types/node@20.19.42)(vite@8.0.16(@types/node@20.19.42)(esbuild@0.28.0)(tsx@4.22.4))
+
   packages/schema:
     dependencies:
       zod:

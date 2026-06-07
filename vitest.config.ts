@@ -14,7 +14,8 @@ export default defineConfig({
       "@checkpoint/examples": `${root}packages/examples/src/index.ts`,
       "@checkpoint/cli": `${root}packages/cli/src/index.ts`,
       "@checkpoint/github-action": `${root}packages/github-action/src/index.ts`,
-      "@checkpoint/collector": `${root}packages/collector/src/index.ts`
+      "@checkpoint/collector": `${root}packages/collector/src/index.ts`,
+      "@checkpoint/guard": `${root}packages/guard/src/index.ts`
     }
   }
 });
