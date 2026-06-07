@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@checkpoint/schema": "workspace:*"
+    "@checkpoint/schema": "workspace:*",
+    "tsx": "^4.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.19.25",

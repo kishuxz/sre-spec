@@ -13,7 +13,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "baseUrl": ".",
+    "paths": {
+      "@checkpoint/schema": ["packages/schema/src/index.ts"],
+      "@checkpoint/core": ["packages/core/src/index.ts"],
+      "@checkpoint/examples": ["packages/examples/src/index.ts"]
+    }
   }
 }
-

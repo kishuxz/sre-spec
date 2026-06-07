@@ -47,6 +47,9 @@ importers:
       '@checkpoint/schema':
         specifier: workspace:*
         version: link:../schema
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
     devDependencies:
       '@types/node':
         specifier: ^20.19.25
