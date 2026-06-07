@@ -20,7 +20,8 @@
       "@checkpoint/core": ["packages/core/src/index.ts"],
       "@checkpoint/examples": ["packages/examples/src/index.ts"],
       "@checkpoint/cli": ["packages/cli/src/index.ts"],
-      "@checkpoint/github-action": ["packages/github-action/src/index.ts"]
+      "@checkpoint/github-action": ["packages/github-action/src/index.ts"],
+      "@checkpoint/collector": ["packages/collector/src/index.ts"]
     }
   }
 }
