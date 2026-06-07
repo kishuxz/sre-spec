@@ -1,0 +1,104 @@
+{
+  "id": "run-sre-good-0001",
+  "agent": "sre-remediation-agent",
+  "source": "simulation",
+  "startedAt": "2026-06-01T14:02:00.000Z",
+  "endedAt": "2026-06-01T14:02:48.000Z",
+  "steps": [
+    {
+      "id": "s1",
+      "type": "llm_call",
+      "name": "triage",
+      "input": {
+        "alert": "api latency p99 > 2s, replicas saturated"
+      },
+      "output": {
+        "plan": "scale deployment/api 3->5 in prod"
+      },
+      "startedAt": "2026-06-01T14:02:00.000Z",
+      "endedAt": "2026-06-01T14:02:06.000Z",
+      "costUsd": 0.004,
+      "tokensIn": 1800,
+      "tokensOut": 220
+    },
+    {
+      "id": "s2",
+      "type": "tool_call",
+      "name": "environment_check",
+      "input": {
+        "context": "current-kubeconfig"
+      },
+      "output": {
+        "environment": "production",
+        "cluster": "prod-us-east-1"
+      },
+      "startedAt": "2026-06-01T14:02:06.000Z",
+      "endedAt": "2026-06-01T14:02:08.000Z"
+    },
+    {
+      "id": "s3",
+      "type": "tool_call",
+      "name": "approval.granted",
+      "input": {
+        "change": "scale deployment/api 3->5",
+        "environment": "production"
+      },
+      "output": {
+        "granted": true,
+        "token": "appr-7f3a91",
+        "approver": "oncall-lead"
+      },
+      "startedAt": "2026-06-01T14:02:08.000Z",
+      "endedAt": "2026-06-01T14:02:20.000Z"
+    },
+    {
+      "id": "s4",
+      "type": "tool_call",
+      "name": "dry_run",
+      "input": {
+        "target": "deployment/api",
+        "environment": "production"
+      },
+      "output": {
+        "plan": "+2 replicas",
+        "willTouch": 1
+      },
+      "startedAt": "2026-06-01T14:02:20.000Z",
+      "endedAt": "2026-06-01T14:02:24.000Z",
+      "metadata": {
+        "resourcesTouched": 0
+      }
+    },
+    {
+      "id": "s5",
+      "type": "tool_call",
+      "name": "terraform.apply",
+      "input": {
+        "target": "deployment/api",
+        "environment": "production"
+      },
+      "output": {
+        "applied": true
+      },
+      "startedAt": "2026-06-01T14:02:24.000Z",
+      "endedAt": "2026-06-01T14:02:40.000Z",
+      "metadata": {
+        "resourcesTouched": 1
+      }
+    },
+    {
+      "id": "s6",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "target": "deployment/api"
+      },
+      "output": {
+        "healthy": true,
+        "p99Ms": 740
+      },
+      "startedAt": "2026-06-01T14:02:40.000Z",
+      "endedAt": "2026-06-01T14:02:48.000Z"
+    }
+  ]
+}

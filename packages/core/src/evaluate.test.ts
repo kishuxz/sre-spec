@@ -8,6 +8,7 @@ import {
   type Run
 } from "./index.js";
 import codingAgentSpec from "../../examples/src/coding-agent-spec.js";
+import sreAgentSpec from "../../examples/src/sre-agent-spec.js";
 
 const baseRun: Run = {
   id: "run-1",
@@ -215,5 +216,57 @@ describe("evaluate", () => {
 
     expect(run.id).toBe("coding-agent-good-001");
     expect(run.steps).toHaveLength(4);
+  });
+
+  it("passes the SRE remediation good fixture without engine changes", async () => {
+    const goodRun = await loadRun("packages/examples/traces/sre-agent/good.json");
+
+    const verdict = evaluate(goodRun, sreAgentSpec);
+
+    expect(verdict.passed).toBe(true);
+  });
+
+  it("blocks the SRE remediation bad fixture on sequence, approval, and blast radius", async () => {
+    const badRun = await loadRun("packages/examples/traces/sre-agent/bad.json");
+
+    const verdict = evaluate(badRun, sreAgentSpec);
+
+    expect(verdict.passed).toBe(false);
+    expect(verdict.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          assertionId: "sequence.terraform.apply",
+          status: "fail",
+          severity: "blocking",
+          message: expect.stringContaining("terraform.apply"),
+          evidence: expect.objectContaining({
+            step: expect.objectContaining({ id: "s3" }),
+            missing: "dry_run"
+          })
+        }),
+        expect.objectContaining({
+          assertionId: "budget.maxResourcesTouched",
+          status: "fail",
+          severity: "blocking",
+          message: "Budget for resources touched failed: 47 > 10.",
+          evidence: expect.objectContaining({
+            actual: 47,
+            limit: 10
+          })
+        }),
+        expect.objectContaining({
+          assertionId: "prod.requires-approval",
+          status: "fail",
+          severity: "blocking",
+          message:
+            "A destructive action targeting production requires a prior approval.granted step carrying a non-empty token.",
+          evidence: expect.objectContaining({
+            group: "assertion",
+            assertionId: "prod.requires-approval",
+            runId: "run-sre-bad-0001"
+          })
+        })
+      ])
+    );
   });
 });
