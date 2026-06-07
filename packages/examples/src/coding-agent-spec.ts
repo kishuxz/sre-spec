@@ -8,6 +8,7 @@ interface StepLike {
 
 interface RunLike {
   steps: StepLike[];
+  metadata?: Record<string, unknown>;
 }
 
 function hasDownMigration(run: RunLike): boolean {
@@ -48,9 +49,14 @@ export const codingAgentSpec = defineSpec<RunLike>({
       id: "migration.has-down",
       message: "Every DB migration step must include a down migration.",
       check: hasDownMigration
+    },
+    {
+      id: "review.recommended",
+      severity: "advisory",
+      message: "Code review is recommended before merging.",
+      check: (run) => run.metadata?.skipReview !== true
     }
   ]
 } satisfies Spec<RunLike>);
 
 export default codingAgentSpec;
-

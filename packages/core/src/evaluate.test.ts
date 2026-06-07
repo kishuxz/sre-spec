@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { defineSpec } from "@checkpoint/schema";
-import { evaluate, loadRun, type CheckpointSpec, type Run } from "./index.js";
+import {
+  evaluate,
+  loadRun,
+  loadSpec,
+  type CheckpointSpec,
+  type Run
+} from "./index.js";
 import codingAgentSpec from "../../examples/src/coding-agent-spec.js";
 
 const baseRun: Run = {
@@ -135,34 +141,6 @@ describe("evaluate", () => {
     );
   });
 
-  it("reports advisory assertion failures without failing the verdict", () => {
-    const verdict = evaluate(
-      baseRun,
-      spec({
-        assertions: [
-          {
-            id: "advisory.false",
-            severity: "advisory",
-            message: "Advisory check failed.",
-            check: () => false
-          }
-        ]
-      })
-    );
-
-    expect(verdict.passed).toBe(true);
-    expect(verdict.results).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          assertionId: "advisory.false",
-          status: "fail",
-          severity: "advisory",
-          message: "Advisory check failed."
-        })
-      ])
-    );
-  });
-
   it("returns correct verdicts for the coding-agent good and bad fixtures", async () => {
     const goodRun = await loadRun(
       "packages/examples/traces/coding-agent/good.json"
@@ -202,5 +180,40 @@ describe("evaluate", () => {
       ])
     );
   });
-});
 
+  it("reports advisory-only coding-agent failures without failing the verdict", async () => {
+    const advisoryRun = await loadRun(
+      "packages/examples/traces/coding-agent/advisory.json"
+    );
+
+    const verdict = evaluate(advisoryRun, codingAgentSpec);
+
+    expect(verdict.passed).toBe(true);
+    expect(verdict.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          assertionId: "review.recommended",
+          status: "fail",
+          severity: "advisory",
+          message: "Code review is recommended before merging."
+        })
+      ])
+    );
+  });
+
+  it("loads a real TypeScript spec module", async () => {
+    const loadedSpec = await loadSpec(
+      "packages/examples/src/coding-agent-spec.ts"
+    );
+
+    expect(loadedSpec.id).toBe("coding-agent.phase-0");
+    expect(loadedSpec.agent).toBe("coding-agent");
+  });
+
+  it("loads a real trace JSON file", async () => {
+    const run = await loadRun("packages/examples/traces/coding-agent/good.json");
+
+    expect(run.id).toBe("coding-agent-good-001");
+    expect(run.steps).toHaveLength(4);
+  });
+});
