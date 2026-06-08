@@ -13,6 +13,8 @@
 import { evaluate } from "@checkpoint/core";
 import type { AssertionResult, Run, Verdict } from "@checkpoint/core";
 import type { Spec } from "@checkpoint/schema";
+import { spawn } from "node:child_process";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
 
 export interface GuardedActionRequest {
   actionType: string;
@@ -59,6 +61,34 @@ export interface GuardedExecuteOptions<TResult> {
   holdable?: boolean;
   compensations?: CompensatingActionRegistry;
   runCompensation?: (actionType: string) => Promise<void>;
+}
+
+export interface TerraformExecutionResult {
+  command: "terraform";
+  workingDirectory: string;
+  init: ProcessResult;
+  apply: ProcessResult;
+}
+
+export interface ProcessResult {
+  code: number;
+  stdout: string;
+  stderr: string;
+}
+
+export type SpawnProcess = (
+  command: string,
+  args: string[],
+  options: {
+    cwd: string;
+    env: Record<string, string>;
+  }
+) => ChildProcessWithoutNullStreams;
+
+export interface SandboxedTerraformExecutorOptions {
+  workingDirectory: string;
+  terraformBin?: string;
+  spawnProcess?: SpawnProcess;
 }
 
 export type GuardedExecutionResult<TResult = unknown> =
@@ -229,8 +259,89 @@ export async function guardedExecute<TResult>(
   };
 }
 
+export function createSandboxedTerraformExecutor(
+  options: SandboxedTerraformExecutorOptions
+): () => Promise<TerraformExecutionResult> {
+  const terraformBin = options.terraformBin ?? "terraform";
+  const spawnProcess = options.spawnProcess ?? spawn;
+
+  return async () => {
+    const init = await runProcess(spawnProcess, terraformBin, ["init", "-input=false"], {
+      cwd: options.workingDirectory,
+      env: sandboxEnv()
+    });
+    const apply = await runProcess(
+      spawnProcess,
+      terraformBin,
+      ["apply", "-auto-approve", "-input=false"],
+      {
+        cwd: options.workingDirectory,
+        env: sandboxEnv()
+      }
+    );
+
+    return {
+      command: "terraform",
+      workingDirectory: options.workingDirectory,
+      init,
+      apply
+    };
+  };
+}
+
 function blockingFailures(verdict: Verdict): AssertionResult[] {
   return verdict.results.filter(
     (result) => result.status === "fail" && result.severity === "blocking"
   );
+}
+
+function sandboxEnv(): Record<string, string> {
+  return {
+    PATH: process.env.PATH ?? "",
+    HOME: process.env.HOME ?? "",
+    TF_IN_AUTOMATION: "1",
+    CHECKPOINT_TERRAFORM_SANDBOX: "1"
+  };
+}
+
+function runProcess(
+  spawnProcess: SpawnProcess,
+  command: string,
+  args: string[],
+  options: {
+    cwd: string;
+    env: Record<string, string>;
+  }
+): Promise<ProcessResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawnProcess(command, args, options);
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString("utf8");
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString("utf8");
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      const result = {
+        code: code ?? 1,
+        stdout,
+        stderr
+      };
+
+      if (result.code !== 0) {
+        reject(
+          new Error(
+            `${command} ${args.join(" ")} failed with exit ${result.code}\n${result.stderr}`
+          )
+        );
+        return;
+      }
+
+      resolve(result);
+    });
+  });
 }
