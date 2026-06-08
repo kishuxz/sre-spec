@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { sql } from "kysely";
 import { evaluate, loadRun, type DriftEvent, type Run } from "@checkpoint/core";
 import sreAgentSpec from "../../examples/src/sre-agent-spec.js";
 import {
@@ -160,6 +161,16 @@ describe("PostgresStore", () => {
     try {
       await store.migrateToLatest();
       await collector.ingest(await loadSreRun("bad"));
+      const runRow = await store.db
+        .selectFrom("runs")
+        .selectAll()
+        .where("id", "=", "run-sre-bad-0001")
+        .executeTakeFirstOrThrow();
+      const checkRow = await store.db
+        .selectFrom("checks")
+        .selectAll()
+        .where("run_id", "=", "run-sre-bad-0001")
+        .executeTakeFirstOrThrow();
       const driftEvent = await store.db
         .selectFrom("drift_events")
         .selectAll()
@@ -170,9 +181,51 @@ describe("PostgresStore", () => {
         .selectAll()
         .where("run_id", "=", "run-sre-bad-0001")
         .executeTakeFirstOrThrow();
+      const jsonbColumns = await sql<
+        Array<{ table_name: string; column_name: string; data_type: string }>
+      >`
+        select table_name, column_name, data_type
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name in ('runs', 'checks', 'drift_events', 'failure_corpus')
+          and column_name in ('payload', 'results', 'failed', 'trace')
+        order by table_name, column_name
+      `.execute(store.db);
       const exported = await store.exportRegressionTrace(driftEvent.id);
 
+      expect(runRow.payload.id).toBe("run-sre-bad-0001");
+      expect(checkRow.results.map((result) => result.assertionId)).toContain(
+        "prod.requires-approval"
+      );
+      expect(driftEvent.failed.map((result) => result.assertionId)).toEqual([
+        "sequence.terraform.apply",
+        "budget.maxResourcesTouched",
+        "prod.requires-approval"
+      ]);
       expect(corpusEntry.run_id).toBe("run-sre-bad-0001");
+      expect(corpusEntry.trace.id).toBe("run-sre-bad-0001");
+      expect(jsonbColumns.rows).toEqual([
+        {
+          table_name: "checks",
+          column_name: "results",
+          data_type: "jsonb"
+        },
+        {
+          table_name: "drift_events",
+          column_name: "failed",
+          data_type: "jsonb"
+        },
+        {
+          table_name: "failure_corpus",
+          column_name: "trace",
+          data_type: "jsonb"
+        },
+        {
+          table_name: "runs",
+          column_name: "payload",
+          data_type: "jsonb"
+        }
+      ]);
       expect(evaluate(exported, sreAgentSpec).passed).toBe(false);
     } finally {
       await store.destroy();

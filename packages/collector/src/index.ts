@@ -3,10 +3,12 @@ import {
   Kysely,
   Migrator,
   PostgresDialect,
+  sql,
   type ColumnType,
   type Generated,
   type Migration,
-  type MigrationProvider
+  type MigrationProvider,
+  type RawBuilder
 } from "kysely";
 import pg from "pg";
 import {
@@ -21,6 +23,7 @@ import {
 const { Pool } = pg;
 
 type JsonRecord = Record<string, unknown>;
+type JsonColumn<T> = ColumnType<T, T | RawBuilder<T>, T | RawBuilder<T>>;
 
 export interface FailureCorpusEntry {
   id: string;
@@ -201,7 +204,7 @@ interface RunTable {
   source: string;
   started_at: string;
   ended_at: string;
-  payload: ColumnType<JsonRecord, JsonRecord, JsonRecord>;
+  payload: JsonColumn<JsonRecord>;
   created_at: Generated<string>;
 }
 
@@ -211,7 +214,7 @@ interface CheckTable {
   spec_id: string;
   spec_version: string;
   passed: boolean;
-  results: ColumnType<JsonRecord[], JsonRecord[], JsonRecord[]>;
+  results: JsonColumn<JsonRecord[]>;
   evaluated_at: string;
 }
 
@@ -220,7 +223,7 @@ interface DriftEventTable {
   spec_id: string;
   spec_version: string;
   run_id: string;
-  failed: ColumnType<JsonRecord[], JsonRecord[], JsonRecord[]>;
+  failed: JsonColumn<JsonRecord[]>;
   detected_at: string;
 }
 
@@ -230,7 +233,7 @@ interface FailureCorpusTable {
   spec_id: string;
   run_id: string;
   label: string;
-  trace: ColumnType<JsonRecord, JsonRecord, JsonRecord>;
+  trace: JsonColumn<JsonRecord>;
   created_at: Generated<string>;
 }
 
@@ -282,7 +285,7 @@ export class PostgresStore implements Store {
         source: run.source,
         started_at: run.startedAt,
         ended_at: run.endedAt,
-        payload: runToJson(run)
+        payload: jsonb(runToJson(run))
       })
       .onConflict((oc) =>
         oc.column("id").doUpdateSet({
@@ -290,7 +293,7 @@ export class PostgresStore implements Store {
           source: run.source,
           started_at: run.startedAt,
           ended_at: run.endedAt,
-          payload: runToJson(run)
+          payload: jsonb(runToJson(run))
         })
       )
       .execute();
@@ -305,7 +308,7 @@ export class PostgresStore implements Store {
         spec_id: verdict.specId,
         spec_version: verdict.specVersion,
         passed: verdict.passed,
-        results: verdict.results.map(assertionResultToJson),
+        results: jsonb(verdict.results.map(assertionResultToJson)),
         evaluated_at: verdict.evaluatedAt
       })
       .execute();
@@ -319,7 +322,7 @@ export class PostgresStore implements Store {
         spec_id: event.specId,
         spec_version: event.specVersion,
         run_id: event.runId,
-        failed: event.failedAssertions.map(assertionResultToJson),
+        failed: jsonb(event.failedAssertions.map(assertionResultToJson)),
         detected_at: event.detectedAt
       })
       .execute();
@@ -334,7 +337,7 @@ export class PostgresStore implements Store {
         spec_id: entry.specId,
         run_id: entry.runId,
         label: entry.label,
-        trace: runToJson(entry.trace)
+        trace: jsonb(runToJson(entry.trace))
       })
       .execute();
   }
@@ -476,4 +479,8 @@ function assertionResultToJson(result: AssertionResult): JsonRecord {
 
 function runToJson(run: Run): JsonRecord {
   return run as unknown as JsonRecord;
+}
+
+function jsonb<T>(value: T): RawBuilder<T> {
+  return sql<T>`${JSON.stringify(value)}::jsonb`;
 }
