@@ -20,6 +20,11 @@ import {
   type Verdict
 } from "@checkpoint/core";
 
+export {
+  fromOpenTelemetrySpans,
+  openTelemetryTraceAdapter
+} from "./otel.js";
+
 const { Pool } = pg;
 
 type JsonRecord = Record<string, unknown>;
