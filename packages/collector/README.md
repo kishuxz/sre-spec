@@ -7,10 +7,9 @@ Default tests use `InMemoryStore` and do not require a database.
 To run Postgres integration tests with Docker:
 
 ```bash
-docker run --rm --name checkpoint-pg -e POSTGRES_PASSWORD=checkpoint -e POSTGRES_DB=checkpoint -p 54329:5432 -d postgres:16
-CHECKPOINT_PG_TEST=1 CHECKPOINT_DATABASE_URL=postgres://postgres:checkpoint@localhost:54329/checkpoint pnpm test
+docker run --rm --name checkpoint-pg -e POSTGRES_PASSWORD="$CHECKPOINT_PG_PASSWORD" -e POSTGRES_DB=checkpoint -p 54329:5432 -d postgres:16
+CHECKPOINT_PG_TEST=1 CHECKPOINT_DATABASE_URL="$CHECKPOINT_DATABASE_URL" pnpm test
 docker stop checkpoint-pg
 ```
 
 Raw traces are stored as `jsonb` in Postgres for now. S3-compatible object storage offload is intentionally deferred until trace payloads are large enough to justify it.
-
