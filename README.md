@@ -132,7 +132,7 @@ checkpoint gate: fail (1 run)
 {"passed":false,"totalRuns":1,"failedRuns":1,"failures":[{"runId":"run-sre-bad-0001","assertionId":"sequence.terraform.apply","severity":"blocking",...}]}
 ```
 
-Exit code `1`. `.github/checkpoint-gate.example.yml` is a ready-to-copy workflow that wires `packages/github-action` into a `pull_request` trigger.
+Exit code `1`. This repository runs its real CI from `.github/workflows/ci.yml`, including a dogfood job for `packages/github-action`. `.github/checkpoint-gate.example.yml` is a ready-to-copy template for users who want to wire the action into their own repos.
 
 ---
 
@@ -260,14 +260,14 @@ pnpm test
   ```sh
   CHECKPOINT_TERRAFORM_TEST=1 TERRAFORM_BIN=/path/to/terraform pnpm exec vitest run packages/guard/src/terraform.test.ts
   ```
-- **`packages/collector/src/collector.test.ts > PostgresStore`** — needs live Postgres. See `packages/collector/README.md`; the default collector tests use `InMemoryStore` and need no database.
+- **`packages/collector/src/collector.test.ts > PostgresStore`** — runs when live Postgres is reachable. This repo's GitHub Actions CI declares a `postgres:16` service and sets `CHECKPOINT_DATABASE_URL`, so the round-trip path executes in CI. Local runs skip it when no database is reachable.
 
 ---
 
 ## Project status
 
-- **v1 — verification in CI: working.** Engine, CLI, and exit codes are exercised by the test suite and the examples above. The GitHub Action itself has no test coverage yet and no workflow in `.github/workflows/` runs it.
-- **v2 — continuous verification: working, Postgres path unverified in CI.** The collector, Kysely migrations, drift events, webhook sink, and corpus export are implemented and tested against `InMemoryStore`. The `PostgresStore` round-trip test is gated behind `CHECKPOINT_PG_TEST=1`.
+- **v1 — verification in CI: working.** Engine, CLI, exit codes, and the GitHub Action wrapper are exercised by the test suite. `.github/workflows/ci.yml` runs the repo CI and dogfoods the action against good and bad SRE traces.
+- **v2 — continuous verification: working, including Postgres in CI.** The collector, Kysely migrations, drift events, webhook sink, corpus export, and `PostgresStore` round trip are tested. CI provides Postgres; local runs skip the Postgres path when no database is reachable.
 - **v3 — guarded execution: implemented for two action types.** CHECKPOINT.md §9 and §13 scope v3 to interfaces only, gated behind v2 catching real drift in production. That gate has not been cleared; the enforcement runtime was built ahead of it. The code is tested, but treat it as ahead of its own schedule.
 
 ---

@@ -8,6 +8,22 @@ jobs:
   quality:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
+    env:
+      CHECKPOINT_DATABASE_URL: postgres://checkpoint:checkpoint@127.0.0.1:5432/checkpoint
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: checkpoint
+          POSTGRES_PASSWORD: checkpoint
+          POSTGRES_DB: checkpoint
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U checkpoint -d checkpoint"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
