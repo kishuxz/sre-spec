@@ -9,7 +9,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "pnpm -r build && vitest run",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "format": "prettier --write .",
