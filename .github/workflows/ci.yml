@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  github-action-dogfood:
+    name: Dogfood GitHub Action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Bad SRE trace is blocked
+        id: bad_trace
+        uses: ./packages/github-action
+        continue-on-error: true
+        with:
+          spec: packages/examples/src/sre-agent-spec.ts
+          traces: packages/examples/traces/sre-agent/bad.json
+          quiet: "true"
+      - name: Assert bad trace failed
+        if: steps.bad_trace.outcome != 'failure'
+        run: exit 1
+      - name: Good SRE trace passes
+        id: good_trace
+        uses: ./packages/github-action
+        with:
+          spec: packages/examples/src/sre-agent-spec.ts
+          traces: packages/examples/traces/sre-agent/good.json
+          quiet: "true"
+      - name: Assert good trace passed
+        if: steps.good_trace.outcome != 'success'
+        run: exit 1
