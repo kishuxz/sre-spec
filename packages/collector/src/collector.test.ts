@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sql } from "kysely";
+import pg from "pg";
 import { evaluate, loadRun, type DriftEvent, type Run } from "@checkpoint/core";
 import sreAgentSpec from "../../examples/src/sre-agent-spec.js";
 import {
@@ -70,11 +71,13 @@ describe("Collector", () => {
         runId: "run-sre-bad-0001"
       })
     );
-    expect(event?.failedAssertions.map((result) => result.assertionId)).toEqual([
-      "sequence.terraform.apply",
-      "budget.maxResourcesTouched",
-      "prod.requires-approval"
-    ]);
+    expect(event?.failedAssertions.map((result) => result.assertionId)).toEqual(
+      [
+        "sequence.terraform.apply",
+        "budget.maxResourcesTouched",
+        "prod.requires-approval"
+      ]
+    );
   });
 
   it("posts drift events through WebhookSink", async () => {
@@ -137,21 +140,25 @@ describe("Collector", () => {
   });
 });
 
-const maybePgIt =
-  process.env.CHECKPOINT_PG_TEST === "1" && process.env.CHECKPOINT_DATABASE_URL
-    ? it
-    : it.skip;
+const { Pool } = pg;
+const defaultConnectionString =
+  "postgres://checkpoint:checkpoint@127.0.0.1:5432/checkpoint";
+const postgresConnectionString =
+  process.env.CHECKPOINT_DATABASE_URL ?? defaultConnectionString;
+const postgresConnectionDescription = describeConnectionString(
+  postgresConnectionString
+);
+const postgresAvailability = await checkPostgres(postgresConnectionString);
+const maybePgIt = postgresAvailability.reachable ? it : it.skip;
+const postgresRoundTripTestName = postgresAvailability.reachable
+  ? "applies migrations and round-trips collector records"
+  : `applies migrations and round-trips collector records (skipped: Postgres is not reachable at ${postgresConnectionDescription}: ${postgresAvailability.message})`;
 
 describe("PostgresStore", () => {
-  maybePgIt("applies migrations and round-trips collector records", async () => {
-    const connectionString = process.env.CHECKPOINT_DATABASE_URL;
-    expect(connectionString).toBeDefined();
-
-    if (!connectionString) {
-      throw new Error("CHECKPOINT_DATABASE_URL is required");
-    }
-
-    const store = new PostgresStore({ connectionString });
+  maybePgIt(postgresRoundTripTestName, async () => {
+    const store = new PostgresStore({
+      connectionString: postgresConnectionString
+    });
     const collector = new Collector({
       spec: sreAgentSpec,
       store,
@@ -160,6 +167,7 @@ describe("PostgresStore", () => {
 
     try {
       await store.migrateToLatest();
+      await deleteSreBadFixtureRows(store);
       await collector.ingest(await loadSreRun("bad"));
       const runRow = await store.db
         .selectFrom("runs")
@@ -232,3 +240,51 @@ describe("PostgresStore", () => {
     }
   });
 });
+
+async function checkPostgres(
+  connectionString: string
+): Promise<{ reachable: true } | { reachable: false; message: string }> {
+  const pool = new Pool({ connectionString, connectionTimeoutMillis: 500 });
+
+  try {
+    await pool.query("select 1");
+    return { reachable: true };
+  } catch (error) {
+    return {
+      reachable: false,
+      message: error instanceof Error ? error.message : String(error)
+    };
+  } finally {
+    await pool.end();
+  }
+}
+
+function describeConnectionString(connectionString: string): string {
+  try {
+    const url = new URL(connectionString);
+    const credentials = url.username || url.password ? "<credentials>@" : "";
+
+    return `${url.protocol}//${credentials}${url.host}${url.pathname}${url.search}`;
+  } catch {
+    return "<invalid connection string>";
+  }
+}
+
+async function deleteSreBadFixtureRows(store: PostgresStore): Promise<void> {
+  await store.db
+    .deleteFrom("failure_corpus")
+    .where("run_id", "=", "run-sre-bad-0001")
+    .execute();
+  await store.db
+    .deleteFrom("drift_events")
+    .where("run_id", "=", "run-sre-bad-0001")
+    .execute();
+  await store.db
+    .deleteFrom("checks")
+    .where("run_id", "=", "run-sre-bad-0001")
+    .execute();
+  await store.db
+    .deleteFrom("runs")
+    .where("id", "=", "run-sre-bad-0001")
+    .execute();
+}

@@ -10,6 +10,8 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "test": "vitest run",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
