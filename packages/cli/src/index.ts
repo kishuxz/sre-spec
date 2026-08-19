@@ -17,6 +17,7 @@ interface ParsedCli {
   tracePattern: string;
   json: boolean;
   quiet: boolean;
+  verbose: boolean;
 }
 
 export async function runCli(argv = process.argv.slice(2)): Promise<CliResult> {
@@ -47,9 +48,9 @@ export async function runCli(argv = process.argv.slice(2)): Promise<CliResult> {
     if (parsed.json) {
       process.stdout.write(`${JSON.stringify(verdicts, null, 2)}\n`);
     } else if (parsed.command === "gate") {
-      printGateReport(verdicts, parsed.quiet);
+      printGateReport(verdicts, parsed.quiet, parsed.verbose);
     } else {
-      printHumanReport(verdicts, parsed.quiet);
+      printHumanReport(verdicts, parsed.quiet, parsed.verbose);
     }
 
     const passed = verdicts.every((verdict) => verdict.passed);
@@ -67,7 +68,8 @@ function parseCli(argv: string[]): ParsedCli {
     allowPositionals: true,
     options: {
       json: { type: "boolean", default: false },
-      quiet: { type: "boolean", default: false }
+      quiet: { type: "boolean", default: false },
+      verbose: { type: "boolean", default: false }
     }
   });
 
@@ -90,7 +92,8 @@ function parseCli(argv: string[]): ParsedCli {
     specPath,
     tracePattern,
     json: parsed.values.json ?? false,
-    quiet: parsed.values.quiet ?? false
+    quiet: parsed.values.quiet ?? false,
+    verbose: parsed.values.verbose ?? false
   };
 }
 
@@ -101,9 +104,9 @@ function isCommand(value: string | undefined): value is Command {
 function usage(): string {
   return [
     "Usage:",
-    "  verify run <spec> <trace> [--json] [--quiet]",
-    "  verify check <spec> <glob> [--json] [--quiet]",
-    "  verify gate <spec> <glob> [--json] [--quiet]"
+    "  verify run <spec> <trace> [--json] [--quiet] [--verbose]",
+    "  verify check <spec> <glob> [--json] [--quiet] [--verbose]",
+    "  verify gate <spec> <glob> [--json] [--quiet] [--verbose]"
   ].join("\n");
 }
 
@@ -181,7 +184,11 @@ async function collectJsonFiles(directory: string): Promise<string[]> {
   return files.sort();
 }
 
-function printHumanReport(verdicts: Verdict[], quiet: boolean): void {
+function printHumanReport(
+  verdicts: Verdict[],
+  quiet: boolean,
+  verbose: boolean
+): void {
   for (const verdict of verdicts) {
     if (!quiet) {
       process.stdout.write(
@@ -198,7 +205,7 @@ function printHumanReport(verdicts: Verdict[], quiet: boolean): void {
         `  ${result.status.toUpperCase()} ${result.severity} ${result.assertionId}: ${result.message}\n`
       );
 
-      if (!quiet && result.evidence !== undefined) {
+      if (verbose && result.evidence !== undefined) {
         process.stdout.write(
           `    evidence: ${JSON.stringify(result.evidence)}\n`
         );
@@ -207,7 +214,11 @@ function printHumanReport(verdicts: Verdict[], quiet: boolean): void {
   }
 }
 
-function printGateReport(verdicts: Verdict[], quiet: boolean): void {
+function printGateReport(
+  verdicts: Verdict[],
+  quiet: boolean,
+  verbose: boolean
+): void {
   const failedResults = verdicts.flatMap((verdict) =>
     verdict.results
       .filter((result) => result.status === "fail")
@@ -225,21 +236,13 @@ function printGateReport(verdicts: Verdict[], quiet: boolean): void {
     process.stdout.write(
       `  ${verdict.runId} ${result.severity} ${result.assertionId}: ${result.message}\n`
     );
-  }
 
-  process.stdout.write(
-    `${JSON.stringify({
-      passed,
-      totalRuns: verdicts.length,
-      failedRuns: verdicts.filter((verdict) => !verdict.passed).length,
-      failures: failedResults.map(({ verdict, result }) => ({
-        runId: verdict.runId,
-        assertionId: result.assertionId,
-        severity: result.severity,
-        message: result.message
-      }))
-    })}\n`
-  );
+    if (verbose && result.evidence !== undefined) {
+      process.stdout.write(
+        `    evidence: ${JSON.stringify(result.evidence)}\n`
+      );
+    }
+  }
 }
 
 function isEntrypoint(): boolean {
