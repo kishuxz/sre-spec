@@ -2,6 +2,10 @@
 
 **Checkpoint holds a destructive agent action before it commits.**
 
+Watch `verify run` catch three blocking SRE violations, then pass the good trace.
+
+[![asciicast](https://asciinema.org/a/C24FvMgiRjTAIhtC.svg)](https://asciinema.org/a/C24FvMgiRjTAIhtC)
+
 You write a typed, machine-checkable definition of how an agent should behave (a **Spec**). Checkpoint proves the agent honors that Spec in CI before release, verifies the same Spec continuously against production traces, and — when an agent is about to run `terraform.apply` or `k8s.delete` — evaluates the run that led up to that action and decides `commit` / `hold` / `compensate` _before_ the side effect happens. The engine is vertical-agnostic: a vertical is a spec library plus adapters plus example traces, not a new engine.
 
 The load-bearing guarantee, and the thing the test suite asserts directly: **on a `hold`, the injected executor is never called.**
