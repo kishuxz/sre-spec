@@ -91,5 +91,12 @@ describe("verify CLI", () => {
     expect(result.code).toBe(2);
     expect(result.stderr).toContain("Usage:");
   });
-});
 
+  it("prints usage for --help with exit code 0", async () => {
+    const result = await runVerify(["--help"]);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("Usage:");
+    expect(result.stderr).toBe("");
+  });
+});

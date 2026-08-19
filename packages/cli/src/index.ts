@@ -21,6 +21,11 @@ interface ParsedCli {
 
 export async function runCli(argv = process.argv.slice(2)): Promise<CliResult> {
   try {
+    if (argv.length === 1 && (argv[0] === "--help" || argv[0] === "-h")) {
+      process.stdout.write(`${usage()}\n`);
+      return { exitCode: 0 };
+    }
+
     const parsed = parseCli(argv);
     const tracePaths =
       parsed.command === "run"
