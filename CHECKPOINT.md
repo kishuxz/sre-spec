@@ -249,10 +249,10 @@ Behaves like a test runner. Exit codes drive CI.
 |---|---|---|
 | `verify run <spec> <trace>` | Evaluate one recorded/simulated run against a spec; print the per-assertion report. | `0` pass, `1` blocking failure, `2` usage/error |
 | `verify check <spec> <glob>` | Evaluate a spec against many recorded runs (a directory/glob of traces). | `0` all pass, `1` any blocking failure |
-| `verify gate <spec> <glob>` | CI mode: same as `check` but terse output + machine-readable summary; non-zero blocks the PR. | `0` pass, `1` violation |
+| `verify gate <spec> <glob>` | CI mode: same as `check` but terse failure output; non-zero blocks the PR. | `0` pass, `1` violation |
 
-- Output: human-readable by default; `--json` emits the `Verdict[]` for tooling.
-- `--quiet` for CI logs. Always print which assertions failed and why.
+- Output: human-readable by default; `--verbose` includes raw JSON evidence; `--json` emits the `Verdict[]` for tooling.
+- `--quiet` for CI logs. Print failures only.
 
 ---
 

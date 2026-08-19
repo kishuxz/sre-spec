@@ -42,6 +42,8 @@ describe("verify CLI", () => {
 
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("PASS coding-agent-good-001");
+    expect(result.stdout).toContain("PASS blocking tool.contract");
+    expect(result.stdout).not.toContain("evidence:");
   });
 
   it("runs a bad trace with exit code 1 and failure output", async () => {
@@ -51,6 +53,16 @@ describe("verify CLI", () => {
     expect(result.stdout).toContain("FAIL coding-agent-bad-001");
     expect(result.stdout).toContain("tool.forbidden.git.force_push_main");
     expect(result.stdout).toContain("sequence.merge");
+    expect(result.stdout).not.toContain("evidence:");
+  });
+
+  it("prints raw evidence only with --verbose", async () => {
+    const result = await runVerify(["run", specPath, badTrace, "--verbose"]);
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain("FAIL coding-agent-bad-001");
+    expect(result.stdout).toContain("evidence:");
+    expect(result.stdout).toContain('"step"');
   });
 
   it("checks a mixed glob with exit code 1", async () => {
@@ -59,13 +71,16 @@ describe("verify CLI", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toContain("tool.forbidden.git.force_push_main");
     expect(result.stdout).toContain("sequence.merge");
+    expect(result.stdout).not.toContain("PASS coding-agent-good-001");
+    expect(result.stdout).not.toContain("evidence:");
   });
 
   it("gates the good trace with exit code 0", async () => {
     const result = await runVerify(["gate", specPath, goodTrace]);
 
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain('"passed":true');
+    expect(result.stdout).toContain("checkpoint gate: pass");
+    expect(result.stdout).not.toContain('"passed":true');
   });
 
   it("gates the bad trace with exit code 1", async () => {
