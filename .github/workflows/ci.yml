@@ -74,3 +74,24 @@ jobs:
       - name: Assert good trace passed
         if: steps.good_trace.outcome != 'success'
         run: exit 1
+
+  fresh-clone-quickstart:
+    name: Fresh clone README quickstart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run README quickstart from a fresh clone
+        run: |
+          mkdir -p /tmp/verify-check
+          cd /tmp/verify-check
+          git clone "$GITHUB_WORKSPACE" sre-spec
+          cd sre-spec
+          pnpm install
+          pnpm build
+          pnpm exec verify run packages/examples/src/sre-agent-spec.ts packages/examples/traces/sre-agent/good.json
